@@ -1,5 +1,6 @@
 import os
 import logging
+import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes, ConversationHandler
 
@@ -157,7 +158,7 @@ for s in adv_steps:
 def fmt(n):
     return f"{n:,.0f}".replace(",", " ")
 
-# ---------- ПРОВЕРКА ТЕМЫ (если нужно) ----------
+# ---------- ПРОВЕРКА ТЕМЫ ----------
 def is_allowed(update: Update) -> bool:
     if ALLOWED_THREAD_ID is None:
         return True
@@ -190,6 +191,23 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await update.message.reply_text("Расчёт отменён. Напишите /start, чтобы начать заново.")
     return ConversationHandler.END
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_allowed(update):
+        return
+    await update.message.reply_text(
+        "📖 Помощь по калькулятору:\n\n"
+        "1. Нажмите /start, чтобы выбрать тип развития.\n"
+        "2. Выберите прямой или обратный расчёт.\n"
+        "3. Введите числа через пробел.\n"
+        "4. /cancel – отменить текущий расчёт.\n\n"
+        "Доступные типы:\n"
+        "• Герой (противоядие) – уровни 1..150\n"
+        "• Навык (значки) – уровни 1..30\n"
+        "• Звёзды героя (фрагменты) – 0..10, шаг 0.2\n"
+        "• Обычное снаряжение – уровни 1..60\n"
+        "• Продвинутое снаряжение – 0..5, шаг 0.2\n"
+    )
 
 async def type_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_allowed(update):
@@ -408,6 +426,14 @@ async def reverse_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Неверный формат или значения. Попробуйте ещё раз или /cancel для отмены.")
         return INPUT_REV
 
+# ---------- УСТАНОВКА КОМАНД (всплывающие подсказки) ----------
+async def set_commands(app):
+    await app.bot.set_my_commands([
+        ("start", "Запустить калькулятор"),
+        ("help", "Помощь"),
+        ("cancel", "Отменить расчёт"),
+    ])
+
 # ---------- ГЛАВНАЯ ----------
 def main():
     app = Application.builder().token(TOKEN).build()
@@ -422,6 +448,12 @@ def main():
         fallbacks=[CommandHandler("cancel", cancel)]
     )
     app.add_handler(conv_handler)
+    app.add_handler(CommandHandler("help", help_command))
+
+    # Установка команд в меню (всплывающие подсказки)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(set_commands(app))
+
     print("Бот запущен...")
     app.run_polling()
 

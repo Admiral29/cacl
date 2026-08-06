@@ -33,6 +33,9 @@ if ALLOWED_THREAD_ID:
     except ValueError:
         ALLOWED_THREAD_ID = None
 
+# Контакт автора — читаем из переменной окружения или задаём здесь по умолчанию
+AUTHOR_CONTACT = os.getenv("AUTHOR_CONTACT", "@your_username")  # Замените при необходимости
+
 TYPE, INPUT_FROM, INPUT_COUNT = range(3)
 
 def fmt(n: int) -> str:
@@ -46,7 +49,7 @@ def is_allowed(update: Update) -> bool:
     thread_id = update.effective_message.message_thread_id
     return thread_id == ALLOWED_THREAD_ID
 
-# ---------- Функции расчёта (без изменений) ----------
+# ---------- Функции расчёта ----------
 def calc_hero_direct(from_lvl: int, to_lvl: int, count: int) -> str:
     if not (1 <= from_lvl < to_lvl <= 150):
         raise ValueError("Уровни героя должны быть от 1 до 150, причём текущий меньше целевого.")
@@ -68,7 +71,8 @@ def calc_stars_direct(from_star: float, to_star: float, count: int) -> str:
         raise ValueError("Текущая звезда должна быть меньше целевой.")
     need = star_cum[to_star] - star_cum[from_star]
     total = need * count
-    return f"🧩 Фрагменты: {fmt(total)} (на {count} героев)"
+    # Уточняем, что это для оружия или героя
+    return f"🧩 Фрагменты (звёзды экс.оружия/героя): {fmt(total)} (на {count} шт.)"
 
 def calc_gear_direct(from_lvl: int, to_lvl: int, count: int) -> str:
     if not (1 <= from_lvl < to_lvl <= 60):
@@ -129,7 +133,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_allowed(update):
         return
-    await update.message.reply_text(
+    help_text = (
         "📖 Помощь по калькулятору:\n\n"
         "1. Нажмите /start, чтобы выбрать тип развития.\n"
         "2. Введите текущий и целевой уровни/звёзды через пробел.\n"
@@ -142,8 +146,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• Уровни снаряжения – 1..60\n"
         "• Звёзды снаряжения – 0..5, шаг 0.2\n"
         "• Пробуждение (фрагменты) – 0..40\n\n"
-        "⚠️ Числа вводите без разделителей, например 5000, а не 5 000."
+        "⚠️ Числа вводите без разделителей, например 5000, а не 5 000.\n\n"
+        f"По вопросам и проблемам обращайтесь: {AUTHOR_CONTACT}"
     )
+    await update.message.reply_text(help_text)
 
 async def type_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_allowed(update):
@@ -155,7 +161,7 @@ async def type_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     messages = {
         "hero": "Введите текущий уровень героя и целевой уровень через пробел (например: 2 10)\nИли /cancel для отмены.",
         "skill": "Введите текущий уровень навыка и целевой через пробел (например: 1 5)\nИли /cancel для отмены.",
-        "stars": "Введите текущую звезду и целевую звезду через пробел (например: 0 8)\nИли /cancel для отмены.",
+        "stars": "Введите текущую звезду (для экс.оружия или героя) и целевую звезду через пробел (например: 0 8)\nИли /cancel для отмены.",
         "gear": "Введите текущий уровень снаряжения и целевой через пробел (например: 1 10)\nИли /cancel для отмены.",
         "advgear": "Введите текущую звезду снаряжения и целевую звезду через пробел (например: 0 5)\nИли /cancel для отмены.",
         "awakening": "Введите текущий уровень пробуждения и целевой через пробел (например: 0 10)\nИли /cancel для отмены.",
@@ -173,7 +179,7 @@ async def direct_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return INPUT_FROM
         context.user_data['from_val'] = parts[0]
         context.user_data['to_val'] = parts[1]
-        await update.message.reply_text("Теперь введите количество (сколько героев/навыков/снаряжения прокачиваете):")
+        await update.message.reply_text("Теперь введите количество (сколько героев/навыков/снаряжения/оружия прокачиваете):")
         return INPUT_COUNT
     except Exception as e:
         logger.error(e)

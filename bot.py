@@ -58,8 +58,8 @@ def calc_hero_direct(from_lvl: int, to_lvl: int, count: int) -> str:
     return f"💊 Противоядие: {fmt(total)} (на {count} героев)"
 
 def calc_skill_direct(from_lvl: int, to_lvl: int, count: int) -> str:
-    if not (1 <= from_lvl < to_lvl <= 30):
-        raise ValueError("Уровни навыка должны быть от 1 до 30, причём текущий меньше целевого.")
+    if not (1 <= from_lvl < to_lvl <= 35):
+        raise ValueError("Уровни навыка должны быть от 1 до 35, причём текущий меньше целевого.")
     need = skill_cum[to_lvl] - skill_cum[from_lvl]
     total = need * count
     return f"📘 Значки навыка: {fmt(total)} (на {count} навыков)"
@@ -141,7 +141,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "4. /cancel – отменить текущий расчёт.\n\n"
         "Доступные типы:\n"
         "• Уровни героя (противоядие) – 1..150\n"
-        "• Навыки героя (значки) – 1..30\n"
+        "• Навыки героя (значки) – 1..35\n"
         "• Звёзды экс.оружия/героя (фрагменты) – 0..10, шаг 0.2\n"
         "• Уровни снаряжения – 1..60\n"
         "• Звёзды снаряжения – 0..5, шаг 0.2\n"

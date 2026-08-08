@@ -34,9 +34,10 @@ if ALLOWED_THREAD_ID:
     except ValueError:
         ALLOWED_THREAD_ID = None
 
-AUTHOR_CONTACT = os.getenv("AUTHOR_CONTACT", "@your_username")  # замените на свой контакт
+AUTHOR_CONTACT = os.getenv("AUTHOR_CONTACT", "@your_username")
 
-TYPE, INPUT_FROM, INPUT_COUNT = range(3)
+# Состояния: CATEGORY -> TYPE -> INPUT_FROM -> INPUT_COUNT
+CATEGORY, TYPE, INPUT_FROM, INPUT_COUNT = range(4)
 
 def fmt(n: int) -> str:
     return f"{n:,}".replace(",", " ")
@@ -121,16 +122,35 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_allowed(update):
         return
     keyboard = [
-        [InlineKeyboardButton("Уровни героя", callback_data="hero")],
-        [InlineKeyboardButton("Навыки героя", callback_data="skill")],
-        [InlineKeyboardButton("Звёзды героя", callback_data="stars_hero")],
-        [InlineKeyboardButton("Звёзды экс.оружия", callback_data="stars_weapon")],
-        [InlineKeyboardButton("Уровни снаряжения", callback_data="gear")],
-        [InlineKeyboardButton("Звёзды снаряжения", callback_data="advgear")],
-        [InlineKeyboardButton("Пробуждение", callback_data="awakening")],
+        [InlineKeyboardButton("👤 Герой", callback_data="cat_hero")],
+        [InlineKeyboardButton("🛡 Снаряжение", callback_data="cat_gear")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Выберите тип развития:", reply_markup=reply_markup)
+    await update.message.reply_text("Выберите категорию:", reply_markup=reply_markup)
+    return CATEGORY
+
+async def category_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_allowed(update):
+        return
+    query = update.callback_query
+    await query.answer()
+    category = query.data
+    context.user_data['category'] = category
+    if category == "cat_hero":
+        keyboard = [
+            [InlineKeyboardButton("Уровни героя", callback_data="hero")],
+            [InlineKeyboardButton("Навыки героя", callback_data="skill")],
+            [InlineKeyboardButton("Звёзды героя", callback_data="stars_hero")],
+            [InlineKeyboardButton("Звёзды экс.оружия", callback_data="stars_weapon")],
+            [InlineKeyboardButton("Пробуждение", callback_data="awakening")],
+        ]
+    else:  # cat_gear
+        keyboard = [
+            [InlineKeyboardButton("Уровни снаряжения", callback_data="gear")],
+            [InlineKeyboardButton("Звёзды снаряжения", callback_data="advgear")],
+        ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text("Выберите тип развития:", reply_markup=reply_markup)
     return TYPE
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -144,18 +164,20 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     help_text = (
         "📖 Помощь по калькулятору:\n\n"
-        "1. Нажмите /start, чтобы выбрать тип развития.\n"
-        "2. Введите текущий и целевой уровни/звёзды через пробел.\n"
-        "3. Введите количество (сколько единиц прокачиваете).\n"
-        "4. /cancel – отменить текущий расчёт.\n\n"
-        "Доступные типы:\n"
+        "1. Нажмите /start, выберите категорию (Герой или Снаряжение).\n"
+        "2. Выберите тип развития.\n"
+        "3. Введите текущий и целевой уровни/звёзды через пробел.\n"
+        "4. Введите количество (сколько единиц прокачиваете).\n"
+        "5. /cancel – отменить текущий расчёт.\n\n"
+        "Категория «Герой»:\n"
         "• Уровни героя (противоядие) – 1..150\n"
         "• Навыки героя (значки) – 1..40\n"
         "• Звёзды героя (фрагменты) – 0..10, шаг 0.2\n"
         "• Звёзды экс.оружия (фрагменты) – 0..10, шаг 0.2 (первый шаг 30)\n"
-        "• Уровни снаряжения – 1..60\n"
-        "• Звёзды снаряжения – 0..5, шаг 0.2\n"
         "• Пробуждение (фрагменты) – 0..40\n\n"
+        "Категория «Снаряжение»:\n"
+        "• Уровни снаряжения – 1..60\n"
+        "• Звёзды снаряжения – 0..5, шаг 0.2\n\n"
         "⚠️ Числа вводите без разделителей, например 5000, а не 5 000.\n\n"
         f"По вопросам и проблемам обращайтесь: {AUTHOR_CONTACT}"
     )
@@ -242,6 +264,7 @@ async def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
+            CATEGORY: [CallbackQueryHandler(category_selected)],
             TYPE: [CallbackQueryHandler(type_selected)],
             INPUT_FROM: [MessageHandler(filters.TEXT & ~filters.COMMAND, direct_input)],
             INPUT_COUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, direct_count_input)],

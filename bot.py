@@ -36,7 +36,6 @@ if ALLOWED_THREAD_ID:
 
 AUTHOR_CONTACT = os.getenv("AUTHOR_CONTACT", "@your_username")
 
-# Состояния: CATEGORY -> TYPE -> INPUT_FROM -> INPUT_COUNT
 CATEGORY, TYPE, INPUT_FROM, INPUT_COUNT = range(4)
 
 def fmt(n: int) -> str:
@@ -141,13 +140,13 @@ async def category_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("Уровни героя", callback_data="hero")],
             [InlineKeyboardButton("Навыки героя", callback_data="skill")],
             [InlineKeyboardButton("Звёзды героя", callback_data="stars_hero")],
-            [InlineKeyboardButton("Звёзды экс.оружия", callback_data="stars_weapon")],
             [InlineKeyboardButton("Пробуждение", callback_data="awakening")],
         ]
     else:  # cat_gear
         keyboard = [
             [InlineKeyboardButton("Уровни снаряжения", callback_data="gear")],
             [InlineKeyboardButton("Звёзды снаряжения", callback_data="advgear")],
+            [InlineKeyboardButton("Звёзды экс.оружия", callback_data="stars_weapon")],
         ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text("Выберите тип развития:", reply_markup=reply_markup)
@@ -173,11 +172,11 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• Уровни героя (противоядие) – 1..150\n"
         "• Навыки героя (значки) – 1..40\n"
         "• Звёзды героя (фрагменты) – 0..10, шаг 0.2\n"
-        "• Звёзды экс.оружия (фрагменты) – 0..10, шаг 0.2 (первый шаг 30)\n"
         "• Пробуждение (фрагменты) – 0..40\n\n"
         "Категория «Снаряжение»:\n"
         "• Уровни снаряжения – 1..60\n"
-        "• Звёзды снаряжения – 0..5, шаг 0.2\n\n"
+        "• Звёзды снаряжения – 0..5, шаг 0.2\n"
+        "• Звёзды экс.оружия (фрагменты) – 0..10, шаг 0.2 (первый шаг 30)\n\n"
         "⚠️ Числа вводите без разделителей, например 5000, а не 5 000.\n\n"
         f"По вопросам и проблемам обращайтесь: {AUTHOR_CONTACT}"
     )

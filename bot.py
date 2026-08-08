@@ -16,7 +16,8 @@ from game_data import (
     hero_cum, skill_cum, star_cum, star_levels,
     gear_cum_stones, gear_cum_grass, gear_cum_steel,
     adv_cum_stones, adv_cum_blueprints, adv_cum_steel, adv_steps,
-    awakening_cum
+    awakening_cum,
+    star_weapon_cum
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -33,8 +34,7 @@ if ALLOWED_THREAD_ID:
     except ValueError:
         ALLOWED_THREAD_ID = None
 
-# Контакт автора — читаем из переменной окружения или задаём здесь по умолчанию
-AUTHOR_CONTACT = os.getenv("AUTHOR_CONTACT", "@your_username")  # Замените при необходимости
+AUTHOR_CONTACT = os.getenv("AUTHOR_CONTACT", "@your_username")  # замените на свой контакт
 
 TYPE, INPUT_FROM, INPUT_COUNT = range(3)
 
@@ -58,21 +58,29 @@ def calc_hero_direct(from_lvl: int, to_lvl: int, count: int) -> str:
     return f"💊 Противоядие: {fmt(total)} (на {count} героев)"
 
 def calc_skill_direct(from_lvl: int, to_lvl: int, count: int) -> str:
-    if not (1 <= from_lvl < to_lvl <= 40):  # было 30
+    if not (1 <= from_lvl < to_lvl <= 40):
         raise ValueError("Уровни навыка должны быть от 1 до 40, причём текущий меньше целевого.")
     need = skill_cum[to_lvl] - skill_cum[from_lvl]
     total = need * count
     return f"📘 Значки навыка: {fmt(total)} (на {count} навыков)"
 
-def calc_stars_direct(from_star: float, to_star: float, count: int) -> str:
+def calc_stars_hero_direct(from_star: float, to_star: float, count: int) -> str:
     if from_star not in star_cum or to_star not in star_cum:
         raise ValueError("Звезда должна быть от 0 до 10 с шагом 0.2.")
     if from_star >= to_star:
         raise ValueError("Текущая звезда должна быть меньше целевой.")
     need = star_cum[to_star] - star_cum[from_star]
     total = need * count
-    # Уточняем, что это для оружия или героя
-    return f"🧩 Фрагменты (звёзды экс.оружия/героя): {fmt(total)} (на {count} шт.)"
+    return f"🧩 Фрагменты (звёзды героя): {fmt(total)} (на {count} героев)"
+
+def calc_stars_weapon_direct(from_star: float, to_star: float, count: int) -> str:
+    if from_star not in star_weapon_cum or to_star not in star_weapon_cum:
+        raise ValueError("Звезда должна быть от 0 до 10 с шагом 0.2.")
+    if from_star >= to_star:
+        raise ValueError("Текущая звезда должна быть меньше целевой.")
+    need = star_weapon_cum[to_star] - star_weapon_cum[from_star]
+    total = need * count
+    return f"🧩 Фрагменты (звёзды экс.оружия): {fmt(total)} (на {count} оружий)"
 
 def calc_gear_direct(from_lvl: int, to_lvl: int, count: int) -> str:
     if not (1 <= from_lvl < to_lvl <= 60):
@@ -115,7 +123,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("Уровни героя", callback_data="hero")],
         [InlineKeyboardButton("Навыки героя", callback_data="skill")],
-        [InlineKeyboardButton("Звёзды экс.оружия/героя", callback_data="stars")],
+        [InlineKeyboardButton("Звёзды героя", callback_data="stars_hero")],
+        [InlineKeyboardButton("Звёзды экс.оружия", callback_data="stars_weapon")],
         [InlineKeyboardButton("Уровни снаряжения", callback_data="gear")],
         [InlineKeyboardButton("Звёзды снаряжения", callback_data="advgear")],
         [InlineKeyboardButton("Пробуждение", callback_data="awakening")],
@@ -142,7 +151,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Доступные типы:\n"
         "• Уровни героя (противоядие) – 1..150\n"
         "• Навыки героя (значки) – 1..40\n"
-        "• Звёзды экс.оружия/героя (фрагменты) – 0..10, шаг 0.2\n"
+        "• Звёзды героя (фрагменты) – 0..10, шаг 0.2\n"
+        "• Звёзды экс.оружия (фрагменты) – 0..10, шаг 0.2 (первый шаг 30)\n"
         "• Уровни снаряжения – 1..60\n"
         "• Звёзды снаряжения – 0..5, шаг 0.2\n"
         "• Пробуждение (фрагменты) – 0..40\n\n"
@@ -160,8 +170,9 @@ async def type_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     t = query.data
     messages = {
         "hero": "Введите текущий уровень героя и целевой уровень через пробел (например: 2 10)\nИли /cancel для отмены.",
-        "skill": "Введите текущий уровень навыка и целевой через пробел (например: 1 5)\nИли /cancel для отмены.",
-        "stars": "Введите текущую звезду (для экс.оружия или героя) и целевую звезду через пробел (например: 0 8)\nИли /cancel для отмены.",
+        "skill": "Введите текущий уровень навыка и целевой через пробел (например: 1 35)\nИли /cancel для отмены.",
+        "stars_hero": "Введите текущую звезду героя и целевую через пробел (например: 0 8)\nИли /cancel для отмены.",
+        "stars_weapon": "Введите текущую звезду экс.оружия и целевую через пробел (например: 0 8)\nИли /cancel для отмены.",
         "gear": "Введите текущий уровень снаряжения и целевой через пробел (например: 1 10)\nИли /cancel для отмены.",
         "advgear": "Введите текущую звезду снаряжения и целевую звезду через пробел (например: 0 5)\nИли /cancel для отмены.",
         "awakening": "Введите текущий уровень пробуждения и целевой через пробел (например: 0 10)\nИли /cancel для отмены.",
@@ -201,8 +212,10 @@ async def direct_count_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
             result = calc_hero_direct(int(a), int(b), count)
         elif t == "skill":
             result = calc_skill_direct(int(a), int(b), count)
-        elif t == "stars":
-            result = calc_stars_direct(float(a), float(b), count)
+        elif t == "stars_hero":
+            result = calc_stars_hero_direct(float(a), float(b), count)
+        elif t == "stars_weapon":
+            result = calc_stars_weapon_direct(float(a), float(b), count)
         elif t == "gear":
             result = calc_gear_direct(int(a), int(b), count)
         elif t == "advgear":
